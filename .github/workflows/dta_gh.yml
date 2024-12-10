@@ -1,0 +1,34 @@
+name: Aqua DTA Scanning
+on:
+  push:
+    branches:
+      - main
+jobs:
+  aqua:
+    name: Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Aqua Registry
+        uses: docker/login-action@v2
+        with:
+          registry: registry.aquasec.com
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PW }}
+          scanner_version: ${{ vars.SCANNER_VERSION }}
+          aqua_url: ${{ vars.AQUA_URL }}
+          registry_name: ${{ vars.REGISTRY_NAME }}
+          image_name: ${{ vars.IMAGE_NAME }}
+          token: ${{ secrets.TOKEN }}
+          pipeline_name: ${{ vars.PIPELINE_NAME }}
+          
+      - name: Pull Aqua Scanner
+        run: |
+          docker pull registry.aquasec.com/scanner:${{ vars.SCANNER_VERSION }}
+      
+      - name: Pull Demo Image
+        run: |
+          docker pull ${{ vars.IMAGE_NAME }}
+
+      - name: Scan Image
+        run: |
+          docker run -e SCALOCK_LOG_LEVEL=DEBUG -e BUILD_JOB_NAME=${{ vars.PIPELINE_NAME }} -v /var/run/docker.sock:/var/run/docker.sock registry.aquasec.com/scanner:${{ vars.SCANNER_VERSION }} scan -n -A ${{ secrets.TOKEN }} -H ${{ vars.AQUA_URL }} --registry ${{ vars.REGISTRY_NAME }} ${{ vars.IMAGE_NAME }}
